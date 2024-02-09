@@ -3,6 +3,7 @@ use std::{
     io::Write,
 };
 
+use anyhow::bail;
 use models::Repositories;
 use reqwest::{
     blocking::Client,
@@ -18,16 +19,17 @@ pub use cli::Cli;
 pub mod models;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
-    let mut cache = Cache::new()?;
+    // Validate input
+    let output = Output::try_from(cli.output)?;
 
-    println!("Querying most popular repos for: {}\n", cli.username);
+    let mut cache = Cache::new()?;
 
     let username = cli.username;
     let url = format!("https://api.github.com/users/{username}/repos");
 
     match cache.user_repositories(&username) {
         Some(repos) if !cli.no_cache => {
-            display_repositories(repos);
+            display_repositories(repos, output)?;
         }
         _ => {
             // Get data from Github
@@ -61,14 +63,42 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
                 };
             file.write_all(s.as_bytes())?;
 
-            display_repositories(&repos);
+            display_repositories(&repos, output)?;
         }
     }
 
     Ok(())
 }
 
-fn display_repositories(repos: &Repositories) {
+enum Output {
+    Text,
+    Json,
+}
+
+impl TryFrom<Option<String>> for Output {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Option<String>) -> Result<Self, Self::Error> {
+        let value = value.unwrap_or("text".to_string());
+
+        match value.to_lowercase().as_str() {
+            "text" => Ok(Self::Text),
+            "json" => Ok(Self::Json),
+            _ => bail!("Output type not supported"),
+        }
+    }
+}
+
+fn display_repositories(repos: &Repositories, output: Output) -> anyhow::Result<()> {
+    match output {
+        Output::Text => display_text(repos),
+        Output::Json => display_json(repos)?,
+    }
+
+    Ok(())
+}
+
+fn display_text(repos: &Repositories) {
     repos.iter().enumerate().for_each(|(idx, r)| {
         let idx = idx + 1;
         if let Some(desc) = &r.description {
@@ -82,5 +112,11 @@ fn display_repositories(repos: &Repositories) {
                 r.name, r.html_url, r.stargazers_count
             );
         }
-    })
+    });
+}
+
+fn display_json(repos: &Repositories) -> anyhow::Result<()> {
+    let res = serde_json::to_string_pretty(repos)?;
+    println!("{}", res);
+    Ok(())
 }
