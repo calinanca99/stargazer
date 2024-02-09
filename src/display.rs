@@ -39,12 +39,12 @@ fn display_text(repos: &Repositories) {
     repos.iter().enumerate().for_each(|(idx, r)| {
         let idx = (idx + 1).to_string();
         let name = r.name.clone();
-        let url = r.html_url.clone();
+        let url = r.url.clone();
         let desc = r
             .description
             .clone()
             .unwrap_or("No description".to_string());
-        let stars = r.stargazers_count.to_string();
+        let stars = r.stars.to_string();
         table.add_row(vec![idx, name, url, desc, stars]);
     });
 

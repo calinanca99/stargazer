@@ -3,13 +3,14 @@ use std::{
     io::Write,
 };
 
-use models::Repositories;
+use github::GithubRepositories;
+use models::{Repositories, Repository};
 use reqwest::{
     blocking::Client,
     header::{AUTHORIZATION, USER_AGENT},
 };
 
-pub mod cache;
+mod cache;
 use cache::Cache;
 
 pub mod cli;
@@ -18,7 +19,8 @@ pub use cli::Cli;
 mod display;
 use display::{display_repositories, Output};
 
-pub mod models;
+mod github;
+mod models;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     // Validate input
@@ -46,10 +48,15 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
                 req = req.header(AUTHORIZATION, bearer);
             }
 
-            let mut res = req.send()?.json::<Repositories>()?;
+            let mut res = req
+                .send()?
+                .json::<GithubRepositories>()?
+                .into_iter()
+                .map(Repository::from)
+                .collect::<Repositories>();
 
             // Sort
-            res.sort_by(|a, b| b.stargazers_count.cmp(&a.stargazers_count));
+            res.sort_by(|a, b| b.stars.cmp(&a.stars));
             let repos = res.into_iter().take(10).collect::<Vec<_>>();
 
             // Cache
