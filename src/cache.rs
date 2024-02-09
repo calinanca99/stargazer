@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fs::File, io::Read};
+use std::{
+    collections::HashMap,
+    fs::{File, OpenOptions},
+    io::{Read, Write},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -24,11 +28,25 @@ impl Cache {
         }
     }
 
-    pub fn user_repositories(&self, username: &str) -> Option<&Repositories> {
+    pub fn get_repositories(&self, username: &str) -> Option<&Repositories> {
         self.repositories.get(username)
     }
 
-    pub fn upsert(&mut self, username: String, repositories: &Repositories) {
+    pub fn upsert_repositories(&mut self, username: String, repositories: &Repositories) {
         self.repositories.insert(username, repositories.to_vec());
+    }
+
+    pub fn flush(&self) -> anyhow::Result<()> {
+        let s = serde_json::to_string(&self)?;
+
+        let mut file =
+            if let Ok(file) = OpenOptions::new().truncate(true).write(true).open(".cache") {
+                file
+            } else {
+                File::create(".cache")?
+            };
+        file.write_all(s.as_bytes())?;
+
+        Ok(())
     }
 }

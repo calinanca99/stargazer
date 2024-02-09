@@ -1,8 +1,3 @@
-use std::{
-    fs::{File, OpenOptions},
-    io::Write,
-};
-
 use github::GithubClient;
 use models::{Repositories, Repository};
 
@@ -26,7 +21,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     let mut cache = Cache::new()?;
 
     let use_cache = !cli.no_cache;
-    match cache.user_repositories(&username) {
+    match cache.get_repositories(&username) {
         Some(repos) if use_cache => {
             display_repositories(repos, output)?;
         }
@@ -43,17 +38,8 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             let repos = repositories.into_iter().take(10).collect::<Vec<_>>();
 
             // Cache
-            cache.upsert(username, &repos);
-            let s = serde_json::to_string(&cache)?;
-
-            // Replace the cache on disk with the new version
-            let mut file =
-                if let Ok(file) = OpenOptions::new().truncate(true).write(true).open(".cache") {
-                    file
-                } else {
-                    File::create(".cache")?
-                };
-            file.write_all(s.as_bytes())?;
+            cache.upsert_repositories(username, &repos);
+            cache.flush()?;
 
             display_repositories(&repos, output)?;
         }
