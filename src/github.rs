@@ -1,6 +1,8 @@
+use anyhow::bail;
 use reqwest::{
     blocking::Client,
     header::{AUTHORIZATION, USER_AGENT},
+    StatusCode,
 };
 use serde::Deserialize;
 
@@ -41,6 +43,18 @@ impl GithubClient {
             req = req.header(AUTHORIZATION, bearer);
         }
 
-        Ok(req.send()?.json::<GithubRepositories>()?)
+        let response = match req.send() {
+            Ok(r) => r,
+            Err(_) => {
+                bail!("Cannot make API call. Make sure that:\n- Your internet connection works")
+            }
+        };
+
+        match response.status() {
+            StatusCode::OK => Ok(response.json::<GithubRepositories>()?),
+            _ => {
+                bail!("Cannot not fetch repositories. Make sure that:\n- The username is correct\n- You're not exceeding the rate-limit \n- You're authorized. Hint: consider using the `--token` flag")
+            }
+        }
     }
 }

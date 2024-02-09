@@ -31,7 +31,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
                 .collect::<Repositories>();
 
             repositories.sort_by(|a, b| b.stars.cmp(&a.stars));
-            let repos = repositories.into_iter().take(10).collect::<Vec<_>>();
+            let repos = repositories.into_iter().take(10).collect::<Repositories>();
 
             cache.upsert_repositories(cli.username, &repos);
             cache.flush()?;
