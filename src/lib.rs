@@ -3,7 +3,6 @@ use std::{
     io::Write,
 };
 
-use anyhow::bail;
 use models::Repositories;
 use reqwest::{
     blocking::Client,
@@ -15,6 +14,9 @@ use cache::Cache;
 
 pub mod cli;
 pub use cli::Cli;
+
+mod display;
+use display::{display_repositories, Output};
 
 pub mod models;
 
@@ -67,56 +69,5 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         }
     }
 
-    Ok(())
-}
-
-enum Output {
-    Text,
-    Json,
-}
-
-impl TryFrom<Option<String>> for Output {
-    type Error = anyhow::Error;
-
-    fn try_from(value: Option<String>) -> Result<Self, Self::Error> {
-        let value = value.unwrap_or("text".to_string());
-
-        match value.to_lowercase().as_str() {
-            "text" => Ok(Self::Text),
-            "json" => Ok(Self::Json),
-            _ => bail!("Output type not supported"),
-        }
-    }
-}
-
-fn display_repositories(repos: &Repositories, output: Output) -> anyhow::Result<()> {
-    match output {
-        Output::Text => display_text(repos),
-        Output::Json => display_json(repos)?,
-    }
-
-    Ok(())
-}
-
-fn display_text(repos: &Repositories) {
-    repos.iter().enumerate().for_each(|(idx, r)| {
-        let idx = idx + 1;
-        if let Some(desc) = &r.description {
-            println!(
-                "{idx}. {} -- {} -- {} -- {}",
-                r.name, r.html_url, desc, r.stargazers_count
-            );
-        } else {
-            println!(
-                "{idx}. {} -- {} -- {}",
-                r.name, r.html_url, r.stargazers_count
-            );
-        }
-    });
-}
-
-fn display_json(repos: &Repositories) -> anyhow::Result<()> {
-    let res = serde_json::to_string_pretty(repos)?;
-    println!("{}", res);
     Ok(())
 }
