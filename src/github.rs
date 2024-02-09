@@ -53,7 +53,7 @@ impl GithubClient {
         match response.status() {
             StatusCode::OK => Ok(response.json::<GithubRepositories>()?),
             _ => {
-                bail!("Cannot not fetch repositories. Make sure that:\n- The username is correct\n- You're not exceeding the rate-limit \n- You're authorized. Hint: consider using the `--token` flag")
+                bail!("Cannot fetch repositories. Make sure that:\n- The username is correct\n- You're not exceeding the rate-limit \n- You're authorized. Hint: consider using the `--token` flag")
             }
         }
     }
