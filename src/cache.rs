@@ -29,8 +29,13 @@ impl Cache {
             let mut buf = String::new();
             file.read_to_string(&mut buf)?;
 
-            let data = serde_json::from_str::<Data>(&buf)?;
-            Ok(Cache { data, path })
+            match serde_json::from_str::<Data>(&buf) {
+                Ok(data) => Ok(Cache { data, path }),
+                Err(_) => bail!(
+                    "The cache file is corrupted. Delete the file located at {} and try again.",
+                    path.display()
+                ),
+            }
         } else {
             Ok(Cache {
                 data: Data::default(),
